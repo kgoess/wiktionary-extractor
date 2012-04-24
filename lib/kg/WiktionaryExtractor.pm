@@ -44,7 +44,7 @@ Overrideable args are cache_dir and wiktionary_url.
 sub new {
     my ($proto, %args) = @_;
     my $self = {
-        cache_dir      => ( $args{cache_dir} ||  "/var/run/wiktionary-cache"),
+        cache_dir      => ( $args{cache_dir} ||  "/var/lib/wiktionary-cache"),
         wiktionary_url => ( $args{wiktionary_url} || "http://en.wiktionary.org/wiki" ),
     };
     return bless $self, $proto;
@@ -118,6 +118,8 @@ sub get_table_data_from_html {
     }
     # remove the 'sing, plural' row
     shift @table;
+    # don't care about vocative right now
+    pop @table;
 
     return \@table;
 

@@ -37,7 +37,6 @@ my $expected = [
           [ 'accusative', 'dom', 'domy' ],
           [ 'instrumental', 'domem', 'domami' ],
           [ 'locative', 'domu', 'domach' ],
-          [ 'vocative', 'domu', 'domy' ]
         ];
 
 is_deeply $table, $expected;
@@ -67,7 +66,6 @@ my $kosciol_expected = [
   [ "accusative", "kościół", "kościoły", ],
   [ "instrumental", "kościołem", "kościołami", ],
   ["locative", "kościele", "kościołach"],
-  ["vocative", "kościele", "kościoły"],
 ];
 
 $table = $we->get_table_data_from_html($result);
