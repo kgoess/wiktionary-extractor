@@ -11,7 +11,7 @@ my $html = <<EOL;
 <html>
 <head><title>polish cases from wiktionary</title></head>
 <body>
-<form method="get" action="http://www.goess.org/cgi-bin/wiktionary.cgi">
+<form method="POST" action="http://www.goess.org/cgi-bin/wiktionary.cgi">
 <input type="text" name="word">
 </form>
 
@@ -31,6 +31,7 @@ EOL
 my $we = kg::WiktionaryExtractor->new;
 my $results;
 if (my $word = $q->param('word')){
+print STDERR "word is $word\n";
     $results = $we->get($word);
 }
 
@@ -40,7 +41,7 @@ my $output;
 $tt->process(\$html, {table => $results}, \$output)
    || die $tt->error();
 
-print $q->header;
+print $q->header(-charset => 'UTF-8');
 print $output;
 
 

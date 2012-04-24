@@ -60,9 +60,11 @@ This is the external method.
 sub get {
     my ($self, $word) = @_;
 
+
     $word =~ s/\P{IsAlpha}//g;
     $word =~ s/\.//g;
     $word = substr($word, 0, 50);
+
 
     $self->{got_from_cache} = 0; # for unit tests
 
