@@ -26,7 +26,6 @@ polish grammar, especially on the phone or ipad.
 
 package kg::WiktionaryExtractor;
 
-use 5.012003;
 use strict;
 use warnings;
 
