@@ -7,6 +7,7 @@ use Test::More tests => 9;
 use FindBin qw($Bin);
 use Data::Dump qw/dump/;
 use Test::Mock::LWP;
+use Encode qw/decode_utf8/;
 use utf8;
 
 
@@ -22,13 +23,15 @@ unlink "$Bin/test-cache/kościół";
 
 my $we = kg::WiktionaryExtractor->new( cache_dir => "$Bin/test-cache");
 
-my $html = `cat $Bin/testinput.html`;
+
+my $html = do { local $/ = undef; open my $fh, "<:utf8" , "$Bin/testinput.html"; <$fh> };
+
 
 my $table = $we->get_table_data_from_html($html);
 
 my $expected = [
           [ 'nominative', 'dom', 'domy' ],
-          [ 'genitive', 'domu', "dom\xC3\xB3w" ],
+          [ 'genitive', 'domu', ("domów") ],
 
           [ 'dative', 'domowi', 'domom' ],
           [ 'accusative', 'dom', 'domy' ],
@@ -51,20 +54,20 @@ is_deeply ($from_cache, $expected);
 #####################
 # test fetching
 
-$Mock_response->mock( decoded_content => sub { `cat t/kościół.html` } );# totally unportable 
+$Mock_response->mock( decoded_content => sub { local $/ = undef; open my $fh, "<:utf8" , "t/kościół.html"; <$fh> } );
 $Mock_ua->mock( get => sub { HTTP::Response->new( 200 ) } );
 
 my $result = $we->fetch_html('kościół');
 ok $result || print STDERR $we->{error},"\n";
 
 my $kosciol_expected = [
-  [ "nominative", "ko\xC5\x9Bci\xC3\xB3\xC5\x82", "ko\xC5\x9Bcio\xC5\x82y", ],
-  [ "genitive", "ko\xC5\x9Bcio\xC5\x82a", "ko\xC5\x9Bcio\xC5\x82\xC3\xB3w", ],
-  [ "dative", "ko\xC5\x9Bcio\xC5\x82owi", "ko\xC5\x9Bcio\xC5\x82om", ],
-  [ "accusative", "ko\xC5\x9Bci\xC3\xB3\xC5\x82", "ko\xC5\x9Bcio\xC5\x82y", ],
-  [ "instrumental", "ko\xC5\x9Bcio\xC5\x82em", "ko\xC5\x9Bcio\xC5\x82ami", ],
-  ["locative", "ko\xC5\x9Bciele", "ko\xC5\x9Bcio\xC5\x82ach"],
-  ["vocative", "ko\xC5\x9Bciele", "ko\xC5\x9Bcio\xC5\x82y"],
+  [ "nominative", "kościół", "kościoły", ],
+  [ "genitive", "kościoła", "kościołów", ],
+  [ "dative", "kościołowi", "kościołom", ],
+  [ "accusative", "kościół", "kościoły", ],
+  [ "instrumental", "kościołem", "kościołami", ],
+  ["locative", "kościele", "kościołach"],
+  ["vocative", "kościele", "kościoły"],
 ];
 
 $table = $we->get_table_data_from_html($result);
