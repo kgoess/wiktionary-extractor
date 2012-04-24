@@ -1,43 +1,101 @@
+=head1 NAME
+
+kg::WiktionaryExtractor - Perl extension for blah blah blah
+
+=head1 SYNOPSIS
+
+  use kg::WiktionaryExtractor;
+  $we = kg::WiktionaryExtractor->new();
+  $table = $we->get('kościół');
+   
+  # $table is now an arrayref struct, one row for each case:
+  #
+  #          [ 'nominative', 'dom', 'domy' ],
+  #          [ 'genitive', 'domu', "domów" ],
+  #          [ 'dative', 'domowi', 'domom' ],
+  #          ...etc.
+
+=head1 DESCRIPTION
+
+Tired of navigating through wiktionary when I want to look up
+polish grammar, especially on the phone or ipad.
+
+=head1 METHODS
+
+=cut
+
 package kg::WiktionaryExtractor;
 
 use 5.012003;
 use strict;
 use warnings;
 
-use Data::Dumper ;
+use Data::Dump qw/dump/ ;
 use HTML::TableExtract;
+use LWP::UserAgent;
+
+our $VERSION = 0.01;
+
+=head2 new
+
+Overrideable args are cache_dir and wiktionary_url.
+
+=cut
 
 sub new {
     my ($proto, %args) = @_;
     my $self = {
-        cache_dir => ( $args{cache_dir} ||  "/var/run/wiktionary-cache"),
+        cache_dir      => ( $args{cache_dir} ||  "/var/run/wiktionary-cache"),
+        wiktionary_url => ( $args{wiktionary_url} || "http://en.wiktionary.org/wiki" ),
     };
     return bless $self, $proto;
 
 }
 
+=head2 get
+
+This is the external method.
+
+=cut
+
 sub get {
     my ($self, $word) = @_;
 
-    $word =~ s/\W//;
-    $word =~ s/\.//;
+    $word =~ s/\P{IsAlpha}//g;
+    $word =~ s/\.//g;
     $word = substr($word, 0, 50);
 
-    $self->{got_from_cache} = 0;
+    $self->{got_from_cache} = 0; # for unit tests
 
     if (my $result = $self->read_from_cache($word)){
         $self->{got_from_cache} = 1;
         return $result;
     }else{
-        my $html = $self->fetch_html($word);
+        my $html = $self->fetch_html($word) || return undef;;
         my $result = $self->get_table_data_from_html($html);
-        $self->write_to_cache($result);
+        $self->write_to_cache($word, $result);
         return $result;
     }
 }
 
 sub fetch_html {
-    ...
+    my ($self, $word) = @_;
+
+    # $word has already been sanitized
+
+    my $ua = LWP::UserAgent->new;
+    $ua->timeout(10);
+    # http://stackoverflow.com/questions/24546/why-cant-i-fetch-wikipedia-pages-with-lwpsimple
+    $ua->agent("WiktionaryGrammar/$VERSION");
+
+    my $response = $ua->get("$self->{wiktionary_url}/$word");
+
+    if ($response->is_success) {
+        return $response->decoded_content;  
+    } else {
+        $self->{error} = "nothing found at $self->{wiktionary_url}/$word";
+        return undef;
+    }
 }
 sub get_table_data_from_html {
     my ($self, $html) = @_;
@@ -53,12 +111,13 @@ sub get_table_data_from_html {
     }
     die "couldn't find declension data in html"
         unless $declension;
+
     my @table;
     foreach my $row ($declension->rows){
         #print "row is @$row\n";
         push @table, $row;
     }
-    # remove 'sing, plural' row
+    # remove the 'sing, plural' row
     shift @table;
 
     return \@table;
@@ -68,15 +127,17 @@ sub get_table_data_from_html {
 sub write_to_cache {
     my ($self, $word, $table) = @_;
 
-    # double paranoid security
-    $word =~ s/\W//g;
+    # double paranoid security, since we already did this in get().
+    # I could also MIME-encode the filename, but I like how the filenames
+    # look with the accents
+    $word =~ s/\P{IsAlpha}//g;
     $word =~ s/\.//g;
     $word =~ s{/}{}g;
 
     my $dir = $self->{cache_dir};
     open my $fh, ">", "$dir/$word" or die "can't open $dir/$word: $!";
-    print $fh Dumper $table;
-    close $fh;
+    print $fh dump $table;
+    close $fh || die "can't close $dir/$word: $!";
 }
 
 sub read_from_cache {
@@ -84,40 +145,19 @@ sub read_from_cache {
 
     my $dir = $self->{cache_dir};
 
-    open my $fh, "<", "$dir/$word" || die "can't open $dir/$word: $!";
+    return undef unless -e "$dir/$word";
+
     my $s;
+    open my $fh, "<", "$dir/$word" || die "can't open $dir/$word: $!";
     while (<$fh>){
         $s .= $_;
     }
-    our $VAR1;
-    eval $s;
-    return $VAR1;
+    close $fh;
+    return eval $s; # should really check return code...
 }
     
 1;
 __END__
-# Below is stub documentation for your module. You'd better edit it!
-
-=head1 NAME
-
-kg::WiktionaryExtractor - Perl extension for blah blah blah
-
-=head1 SYNOPSIS
-
-  use kg::WiktionaryExtractor;
-  blah blah blah
-
-=head1 DESCRIPTION
-
-Stub documentation for kg::WiktionaryExtractor, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
-
-Blah blah blah.
-
-=head2 EXPORT
-
-None by default.
 
 
 
