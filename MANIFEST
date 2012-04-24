@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/kg-WiktionaryExtractor.t
+lib/kg/WiktionaryExtractor.pm
